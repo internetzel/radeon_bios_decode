@@ -633,6 +633,15 @@ show_connectors_from_obj(struct atom_context *ctx,
     int index = GetIndexIntoMasterTable(DATA, Object_Header);
     uint16_t data_offset;
 
+    if (!atom_parse_data_header(ctx, index, &size, &frev, &crev,
+				&data_offset)) {
+	return FALSE;
+    }
+    if (crev < 2) {
+	return FALSE;
+    }
+
+    if (crev < 4) {
 	ATOM_CONNECTOR_OBJECT_TABLE *con_obj;
 	ATOM_OBJECT_TABLE *router_obj;
 	ATOM_DISPLAY_OBJECT_PATH_TABLE *path_obj;
@@ -645,15 +654,6 @@ show_connectors_from_obj(struct atom_context *ctx,
 	struct radeon_i2c_bus_rec ddc_bus;
 
 
-    if (!atom_parse_data_header(ctx, index, &size, &frev, &crev,
-				&data_offset)) {
-	return FALSE;
-    }
-    if (crev < 2) {
-	return FALSE;
-    }
-
-    if (crev < 4) {
 	obj_header = (ATOM_OBJECT_HEADER *) (ctx->bios + data_offset);
 	path_obj = (ATOM_DISPLAY_OBJECT_PATH_TABLE *)
 	    (ctx->bios + data_offset +
@@ -897,7 +897,255 @@ show_connectors_from_obj(struct atom_context *ctx,
 
     if (crev == 4) {
         printf("Add support for Navi Object_Header here!\n");
-        return TRUE;
+
+	ATOM_CONNECTOR_OBJECT_TABLE *con_obj;
+	ATOM_OBJECT_TABLE *router_obj;
+	struct atom_display_object_path_v2 *path_obj;
+	struct display_object_info_table_v1_4 *obj_header;
+	int i, j, k, device_support;
+	int connector_type;
+	u16 igp_lane_info, connector_object_id;
+	struct radeon_router router;
+	struct radeon_hpd hpd;
+	struct radeon_i2c_bus_rec ddc_bus;
+
+
+	obj_header = (struct display_object_info_table_v1_4 *) (ctx->bios + data_offset);
+#if false
+	con_obj = (ATOM_CONNECTOR_OBJECT_TABLE *)
+	    (ctx->bios + data_offset +
+	     le16_to_cpu(obj_header->usConnectorObjectTableOffset));
+	router_obj = (ATOM_OBJECT_TABLE *)
+		(ctx->bios + data_offset +
+		 le16_to_cpu(obj_header->usRouterObjectTableOffset));
+#endif
+	device_support = le16_to_cpu(obj_header->supporteddevices);
+
+	for (i = 0; i < obj_header->number_of_path; i++) {
+		struct atom_display_object_path_v2 *path = &obj_header->display_path[i];
+		if (device_support & le16_to_cpu(path->device_tag)) {
+			uint8_t con_obj_id, con_obj_num, con_obj_type;
+
+			con_obj_id =
+			    (le16_to_cpu(path->display_objid) & OBJECT_ID_MASK)
+			    >> OBJECT_ID_SHIFT;
+#if false
+			con_obj_num =
+			    (le16_to_cpu(path->usConnObjectId) & ENUM_ID_MASK)
+			    >> ENUM_ID_SHIFT;
+			con_obj_type =
+			    (le16_to_cpu(path->usConnObjectId) &
+			     OBJECT_TYPE_MASK) >> OBJECT_TYPE_SHIFT;
+#endif
+
+			/* TODO CV support */
+			if (le16_to_cpu(path->device_tag) ==
+				ATOM_DEVICE_CV_SUPPORT)
+				continue;
+
+			igp_lane_info = 0;
+			connector_type =
+			    object_connector_convert[con_obj_id];
+			printf("Connector at index %d\n\tType [@offset %d]: %s (%d)\n", i,
+			       biosoffset(ctx, &path->display_objid),
+			       connectortype_to_name(connector_type), connector_type);
+			connector_object_id = con_obj_id;
+
+			if (connector_type == DRM_MODE_CONNECTOR_Unknown)
+				continue;
+			router.ddc_valid = FALSE;
+			router.cd_valid = FALSE;
+#if false
+			for (j = 0; j < ((le16_to_cpu(path->usSize) - 8) / 2); j++) {
+				uint8_t grph_obj_id, grph_obj_num, grph_obj_type;
+
+				grph_obj_id =
+				    (le16_to_cpu(path->usGraphicObjIds[j]) &
+				     OBJECT_ID_MASK) >> OBJECT_ID_SHIFT;
+				grph_obj_num =
+				    (le16_to_cpu(path->usGraphicObjIds[j]) &
+				     ENUM_ID_MASK) >> ENUM_ID_SHIFT;
+				grph_obj_type =
+				    (le16_to_cpu(path->usGraphicObjIds[j]) &
+				     OBJECT_TYPE_MASK) >> OBJECT_TYPE_SHIFT;
+
+				if (grph_obj_type == GRAPH_OBJECT_TYPE_ENCODER) {
+				    uint16_t id;
+					u16 encoder_obj = le16_to_cpu(path->usGraphicObjIds[j]);
+
+					id = (encoder_obj & OBJECT_ID_MASK) >> OBJECT_ID_SHIFT;
+					//printf("\tEncoder enum: %x\n", encoder_obj);
+				    printf("\tEncoder [@offset %d]: %s (0x%x, 0x)\n", biosoffset(ctx, &path->usGraphicObjIds[j]), encoder_name(grph_obj_id), grph_obj_id);
+				} else if (grph_obj_type == GRAPH_OBJECT_TYPE_ROUTER) {
+					printf("ROOOOUTER!!!");
+					for (k = 0; k < router_obj->ucNumberOfObjects; k++) {
+						u16 router_obj_id = le16_to_cpu(router_obj->asObjects[k].usObjectID);
+						if (le16_to_cpu(path->usGraphicObjIds[j]) == router_obj_id) {
+							ATOM_COMMON_RECORD_HEADER *record = (ATOM_COMMON_RECORD_HEADER *)
+								(ctx->bios + data_offset +
+								 le16_to_cpu(router_obj->asObjects[k].usRecordOffset));
+							ATOM_I2C_RECORD *i2c_record;
+							ATOM_I2C_ID_CONFIG_ACCESS *i2c_config;
+							ATOM_ROUTER_DDC_PATH_SELECT_RECORD *ddc_path;
+							ATOM_ROUTER_DATA_CLOCK_PATH_SELECT_RECORD *cd_path;
+							ATOM_SRC_DST_TABLE_FOR_ONE_OBJECT *router_src_dst_table =
+								(ATOM_SRC_DST_TABLE_FOR_ONE_OBJECT *)
+								(ctx->bios + data_offset +
+								 le16_to_cpu(router_obj->asObjects[k].usSrcDstTableOffset));
+							int enum_id;
+
+							router.router_id = router_obj_id;
+							for (enum_id = 0; enum_id < router_src_dst_table->ucNumberOfDst;
+							     enum_id++) {
+								if (le16_to_cpu(path->usConnObjectId) ==
+								    le16_to_cpu(router_src_dst_table->usDstObjectID[enum_id]))
+									break;
+							}
+
+							while (record->ucRecordType > 0 &&
+							       record->ucRecordType <= ATOM_MAX_OBJECT_RECORD_NUMBER) {
+								switch (record->ucRecordType) {
+								case ATOM_I2C_RECORD_TYPE:
+									i2c_record =
+										(ATOM_I2C_RECORD *)
+										record;
+									i2c_config =
+										(ATOM_I2C_ID_CONFIG_ACCESS *)
+										&i2c_record->sucI2cId;
+									router.i2c_info =
+									    radeon_lookup_i2c_gpio(ctx,
+												       i2c_config->
+												       ucAccess);
+									router.i2c_addr = i2c_record->ucI2CAddr >> 1;
+									printf("i2c: 0x%x", router.i2c_info);
+									break;
+								case ATOM_ROUTER_DDC_PATH_SELECT_RECORD_TYPE:
+									ddc_path = (ATOM_ROUTER_DDC_PATH_SELECT_RECORD *)
+										record;
+									router.ddc_valid = TRUE;
+									router.ddc_mux_type = ddc_path->ucMuxType;
+									router.ddc_mux_control_pin = ddc_path->ucMuxControlPin;
+									router.ddc_mux_state = ddc_path->ucMuxState[enum_id];
+									printf("ddc: 0x%x", router.ddc_mux_control_pin);
+									break;
+								case ATOM_ROUTER_DATA_CLOCK_PATH_SELECT_RECORD_TYPE:
+									cd_path = (ATOM_ROUTER_DATA_CLOCK_PATH_SELECT_RECORD *)
+										record;
+									router.cd_valid = TRUE;
+									router.cd_mux_type = cd_path->ucMuxType;
+									router.cd_mux_control_pin = cd_path->ucMuxControlPin;
+									router.cd_mux_state = cd_path->ucMuxState[enum_id];
+									printf("cd: 0x%x", router.cd_mux_control_pin);
+									break;
+								}
+								record = (ATOM_COMMON_RECORD_HEADER *)
+									((char *)record + record->ucRecordSize);
+							}
+						}
+					}
+				}
+			}
+
+#ifdef notdef
+			/* look up gpio for ddc, hpd */
+			ddc_bus.valid = false;
+#endif
+			hpd.hpd = RADEON_HPD_NONE;
+			if ((le16_to_cpu(path->usDeviceTag) &
+			     (ATOM_DEVICE_TV_SUPPORT | ATOM_DEVICE_CV_SUPPORT)) == 0) {
+				for (j = 0; j < con_obj->ucNumberOfObjects; j++) {
+					if (le16_to_cpu(path->usConnObjectId) ==
+					    le16_to_cpu(con_obj->asObjects[j].
+							usObjectID)) {
+						ATOM_COMMON_RECORD_HEADER
+						    *record =
+						    (ATOM_COMMON_RECORD_HEADER
+						     *)
+						    (ctx->bios + data_offset +
+						     le16_to_cpu(con_obj->
+								 asObjects[j].
+								 usRecordOffset));
+						ATOM_I2C_RECORD *i2c_record;
+						ATOM_HPD_INT_RECORD *hpd_record;
+						ATOM_I2C_ID_CONFIG_ACCESS *i2c_config;
+						
+						ATOM_ROUTER_DDC_PATH_SELECT_RECORD *test;
+
+						while (record->ucRecordType > 0
+						       && record->
+						       ucRecordType <=
+						       ATOM_MAX_OBJECT_RECORD_NUMBER) {
+							switch (record->ucRecordType) {
+							case ATOM_I2C_RECORD_TYPE:
+								i2c_record =
+								    (ATOM_I2C_RECORD *)
+									record;
+								i2c_config =
+									(ATOM_I2C_ID_CONFIG_ACCESS *)
+									&i2c_record->sucI2cId;
+								printf("\ti2cid [@offset %d]: 0x%x, OSX senseid: 0x%x\n", biosoffset(ctx, &i2c_config->ucAccess),
+								       i2c_config->ucAccess, (i2c_config->ucAccess & 0xf)+1);
+								ddc_bus = radeon_lookup_i2c_gpio(ctx,
+												 i2c_config->
+												 ucAccess);
+								break;
+							case ATOM_HPD_INT_RECORD_TYPE:
+								hpd_record =
+									(ATOM_HPD_INT_RECORD *)
+									record;
+#ifdef notdef
+								gpio = radeon_lookup_gpio(ctx,
+											  hpd_record->ucHPDIntGPIOID);
+								hpd = radeon_atom_get_hpd_info_from_gpio(rdev, &gpio);
+#endif
+								hpd.plugged_state = hpd_record->ucPlugged_PinState;
+								
+								printf("\tHotPlugID: %x\n", hpd_record->ucHPDIntGPIOID);
+
+								break;
+							case ATOM_ROUTER_DDC_PATH_SELECT_RECORD_TYPE:
+								test = (ATOM_ROUTER_DDC_PATH_SELECT_RECORD *) record;
+								
+								printf("TEST!!! 0x%x", test->ucMuxControlPin);
+							}
+							record =
+							    (ATOM_COMMON_RECORD_HEADER
+							     *) ((char *)record
+								 +
+								 record->
+								 ucRecordSize);
+						}
+						break;
+					}
+				}
+			}
+
+#ifdef notdef
+			/* needed for aux chan transactions */
+			ddc_bus.hpd = hpd.hpd;
+
+			conn_id = le16_to_cpu(path->usConnObjectId);
+
+			if (!radeon_atom_apply_quirks
+			    (dev, le16_to_cpu(path->usDeviceTag), &connector_type,
+			     &ddc_bus, &conn_id, &hpd))
+				continue;
+
+			radeon_add_atom_connector(dev,
+						  conn_id,
+						  le16_to_cpu(path->
+							      usDeviceTag),
+						  connector_type, &ddc_bus,
+						  igp_lane_info,
+						  connector_object_id,
+						  &hpd,
+						  &router);
+
+#endif
+#endif
+		}
+	}
+	return TRUE;
     }
 }
 
