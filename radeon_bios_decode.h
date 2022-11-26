@@ -67,7 +67,11 @@ typedef struct _atomDataTables
     ATOM_OEM_INFO                       *OemInfo;
     ATOM_XTMDS_INFO                     *XTMDS_Info;
     ATOM_ASIC_MVDD_INFO                 *MclkSS_Info;
-    ATOM_OBJECT_HEADER                  *Object_Header;
+    union {
+        void                            *base;
+        ATOM_OBJECT_HEADER	        *Object_Header;
+        struct display_object_info_table_v1_4  *Object_Header_v4;
+    } Object_Header;
     INDIRECT_IO_ACCESS                  *IndirectIOAccess;
     ATOM_MC_INIT_PARAM_TABLE            *MC_InitParameter;
 /**/unsigned char                       *ASIC_VDDC_Info;

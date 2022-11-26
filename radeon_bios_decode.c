@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "atombios.h"
+#include "atomfirmware.h"
 #include "radeon_bios_decode.h"
 /*#include <byteswap.h>*/
 #include <stdio.h>
@@ -652,6 +653,7 @@ show_connectors_from_obj(struct atom_context *ctx,
 	return FALSE;
     }
 
+    if (crev < 4) {
 	obj_header = (ATOM_OBJECT_HEADER *) (ctx->bios + data_offset);
 	path_obj = (ATOM_DISPLAY_OBJECT_PATH_TABLE *)
 	    (ctx->bios + data_offset +
@@ -891,6 +893,12 @@ show_connectors_from_obj(struct atom_context *ctx,
 		}
 	}
 	return TRUE;
+    }
+
+    if (crev == 4) {
+        printf("Add support for Navi Object_Header here!\n");
+        return TRUE;
+    }
 }
 
 static Bool
@@ -1021,9 +1029,8 @@ rhdAtomGetDataTable(struct atom_context *ctx,
     ctx->data_table = CU16(atom_romhdr_off + ATOM_ROM_DATA_PTR);
     show_multimedia(ctx, base, atom_rom_hdr);
 
-    if (!show_connectors(ctx, base, atom_rom_hdr, data_offset)) {
-	show_connectors_from_obj(ctx, base, atom_rom_hdr);
-    }
+    show_connectors(ctx, base, atom_rom_hdr, data_offset);
+    show_connectors_from_obj(ctx, base, atom_rom_hdr);
 /*    radeon_dump_i2c_gpio(ctx);*/
     return TRUE;
 }

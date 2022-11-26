@@ -54,6 +54,7 @@ enum  atom_bios_header_version_def{
   #endif
 #endif
 
+#if false
 enum atom_crtc_def{
   ATOM_CRTC1      =0,
   ATOM_CRTC2      =1,
@@ -102,6 +103,7 @@ enum atom_encode_mode_def
   ATOM_ENCODER_MODE_CRT         =15,
   ATOM_ENCODER_MODE_DVO         =16,
 };
+#endif
 
 enum atom_encoder_refclk_src_def{
   ENCODER_REFCLK_SRC_P1PLL      =0,
@@ -111,6 +113,7 @@ enum atom_encoder_refclk_src_def{
   ENCODER_REFCLK_SRC_INVALID    =0xff,
 };
 
+#if false
 enum atom_scaler_def{
   ATOM_SCALER_DISABLE          =0,  /*scaler bypass mode, auto-center & no replication*/
   ATOM_SCALER_CENTER           =1,  //For Fudo, it's bypass and auto-center & auto replication
@@ -150,6 +153,7 @@ enum atom_panel_bit_per_color{
   PANEL_12BIT_PER_COLOR  =0x04,
   PANEL_16BIT_PER_COLOR  =0x05,
 };
+#endif
 
 //ucVoltageType
 enum atom_voltage_type
@@ -211,6 +215,7 @@ atom_bios_string          = "ATOM"
 
 #pragma pack(1)                          /* BIOS data must use byte aligment*/
 
+#if false
 enum atombios_image_offset{
   OFFSET_TO_ATOM_ROM_HEADER_POINTER          = 0x00000048,
   OFFSET_TO_ATOM_ROM_IMAGE_SIZE              = 0x00000002,
@@ -221,6 +226,7 @@ enum atombios_image_offset{
   OFFSET_TO_VBIOS_PART_NUMBER                = 0x80,
   OFFSET_TO_VBIOS_DATE                       = 0x50,
 };
+#endif
 
 /****************************************************************************   
 * Common header for all tables (Data table, Command function).
@@ -451,6 +457,7 @@ struct atom_dtd_format
   uint8_t   refreshrate;
 };
 
+#if false
 /* atom_dtd_format.modemiscinfo defintion */
 enum atom_dtd_format_modemiscinfo{
   ATOM_HSYNC_POLARITY    = 0x0002,
@@ -460,6 +467,7 @@ enum atom_dtd_format_modemiscinfo{
   ATOM_INTERLACE         = 0x0080,
   ATOM_COMPOSITESYNC     = 0x0040,
 };
+#endif
 
 
 /* utilitypipeline
@@ -645,9 +653,11 @@ struct lcd_info_v2_1
 };
 
 /* lcd_info_v2_1.panel_misc defintion */
+#if false
 enum atom_lcd_info_panel_misc{
   ATOM_PANEL_MISC_FPDI            =0x0002,
 };
+#endif
 
 //uceDPToLVDSRxId
 enum atom_lcd_info_dptolvds_rx_id
@@ -726,6 +736,7 @@ struct vram_usagebyfirmware_v2_1
   ***************************************************************************
 */
 
+#if false
 enum atom_object_record_type_id {
 	ATOM_I2C_RECORD_TYPE = 1,
 	ATOM_HPD_INT_RECORD_TYPE = 2,
@@ -741,6 +752,7 @@ enum atom_object_record_type_id {
 	ATOM_BRACKET_LAYOUT_V2_RECORD_TYPE = 25,
 	ATOM_RECORD_END_TYPE = 0xFF,
 };
+#endif
 
 struct atom_common_record_header
 {
@@ -824,6 +836,7 @@ struct atom_object_gpio_cntl_record
 };
 
 //Definitions for GPIO pin state 
+#if false
 enum atom_gpio_pin_control_pinstate_def
 {
   GPIO_PIN_TYPE_INPUT             = 0x00,
@@ -852,6 +865,7 @@ enum atom_glsync_record_gpio_index_def
   ATOM_GPIO_INDEX_GLSYNC_SWAP_SEL  = 8,
   ATOM_GPIO_INDEX_GLSYNC_MAX       = 9,
 };
+#endif
 
 
 struct atom_connector_hpdpin_lut_record     //record for ATOM_CONNECTOR_HPDPIN_LUT_RECORD_TYPE
@@ -3550,12 +3564,14 @@ struct set_engine_clock_ps_allocation_v2_1
 };
 
 
+#if false
 enum atom_set_engine_mem_clock_flag
 {
   b3NORMAL_CHANGE_CLOCK = 0,
   b3FIRST_TIME_CHANGE_CLOCK = 0x08,
   b3STORE_DPM_TRAINGING = 0x40,         //Applicable to memory clock change,when set, it store specific DPM mode training result
 };
+#endif
 
 /* 
   ***************************************************************************
@@ -3825,12 +3841,14 @@ struct  atom_get_smu_clock_info_output_parameters_v3_1
   *************************************************************************** 
 */   
 
+#if false
 enum atom_dynamic_memory_setting_command 
 {
   COMPUTE_MEMORY_PLL_PARAM = 1,
   COMPUTE_ENGINE_PLL_PARAM = 2,
   ADJUST_MC_SETTING_PARAM = 3,
 };
+#endif
 
 /* when command = COMPUTE_MEMORY_PLL_PARAM or ADJUST_MC_SETTING_PARAM */
 struct dynamic_mclk_settings_parameters_v2_1
@@ -3988,11 +4006,13 @@ struct blank_crtc_parameters
   uint32_t reserved1;
 };
 
+#if false
 enum atom_blank_crtc_command
 {
   ATOM_BLANKING         = 1,
   ATOM_BLANKING_OFF     = 0,
 };
+#endif
 
 /****************************************************************************/   
 // Structures used by enablecrtc
@@ -4061,6 +4081,7 @@ struct process_i2c_channel_transaction_parameters
 };
 
 //ucFlag
+#if false
 enum atom_process_i2c_flag
 {
   HW_I2C_WRITE          = 1,
@@ -4075,6 +4096,7 @@ enum atom_process_i2c_status
   HW_ASSISTED_I2C_STATUS_FAILURE     =2,
   HW_ASSISTED_I2C_STATUS_SUCCESS     =1,
 };
+#endif
 
 
 /****************************************************************************/   
@@ -4113,6 +4135,7 @@ struct select_crtc_source_parameters_v2_3
 /****************************************************************************/   
 
 // ucAction:
+#if false
 enum atom_dig_encoder_control_action
 {
   ATOM_ENCODER_CMD_DISABLE_DIG                  = 0,
@@ -4151,6 +4174,7 @@ enum atom_dig_encoder_control_v5_digid
   ATOM_ENCODER_CONFIG_V5_DIG6_ENCODER           = 0x06,
   ATOM_ENCODER_CONFIG_V5_DIG7_ENCODER           = 0x07,
 };
+#endif
 
 struct dig_encoder_stream_setup_parameters_v1_5
 {
@@ -4230,6 +4254,7 @@ struct dig_transmitter_control_ps_allocation_v1_6
 };
 
 //ucAction
+#if false
 enum atom_dig_transmitter_control_action
 {
   ATOM_TRANSMITTER_ACTION_DISABLE                 = 0,
@@ -4287,6 +4312,7 @@ enum atom_dig_transmitter_control_dplaneset
   DP_LANE_SET__6DB_0_6V                           = 0x11,
   DP_LANE_SET__9_5DB_0_4V                         = 0x18, 
 };
+#endif
 
 
 
@@ -4400,6 +4426,7 @@ struct gop_lib1_content {
   *************************************************************************** 
 */   
 
+#if false
 enum scratch_register_def{
   ATOM_DEVICE_CONNECT_INFO_DEF      = 0,
   ATOM_BL_BRI_LEVEL_INFO_DEF        = 2,
@@ -4477,6 +4504,7 @@ enum scratch_pre_os_mode_info_bits_def{
   ATOM_PRE_OS_MODE_NUMBER_MASK      =0xFFFF0000,
 #endif
 };
+#endif
 
 
 
